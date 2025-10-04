@@ -1,46 +1,122 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Шаурма — корзина</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f8fafc;color:#111827}
+    .container{max-width:1100px;margin:auto;padding:24px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    h1{font-size:20px;margin:0}
+    main{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+    .product{background:#fff;border-radius:12px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;flex-direction:column;align-items:center;text-align:center}
+    .product img{width:100%;height:180px;object-fit:cover;border-radius:8px;margin-bottom:10px}
+    .product h2{font-size:16px;margin:6px 0 4px 0}
+    .product p{margin:0 0 10px 0;color:#6b7280}
+    button{background:#2563eb;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    aside{background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.06);padding:16px;margin-top:30px}
+    .cart-list{display:flex;flex-direction:column;gap:10px}
+    .cart-item{display:flex;justify-content:space-between;align-items:center}
+    .qty button{background:transparent;color:#2563eb;border:1px solid #e5e7eb;padding:4px 8px;border-radius:6px;cursor:pointer}
+    .totals{margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:12px}
+    .empty{color:#6b7280;text-align:center;padding:20px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Меню шаурми</h1>
+      <div>🛒 Корзина зберігається у LocalStorage</div>
+    </header>
 
+    <main id="products">
+      <!-- Продукти генеруються скриптом -->
+    </main>
 
+    <aside>
+      <h2>Корзина</h2>
+      <div id="cart" class="cart-list"></div>
+      <div id="cart-empty" class="empty" style="display:none">Корзина порожня</div>
+      <div id="totals" class="totals" style="display:none">
+        <div style="display:flex;justify-content:space-between"><span>Проміжок</span><span id="subtotal">0 ₴</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Доставка</span><span id="shipping">50 ₴</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700"><span>Разом</span><span id="total">0 ₴</span></div>
+        <button id="checkout" style="width:100%;margin-top:10px">Оформити</button>
+        <button id="clear" style="width:100%;margin-top:8px;background:#e5e7eb;color:#111">Очистити</button>
+      </div>
+    </aside>
+  </div>
 
+  <script>
+    // --- Дані товарів ---
+    const PRODUCTS = [
+      { id:'s1', title:'Домашня шаурма з вареною ковбасою та овочами', price:89.9, img:'https://mynizhyn.com/image/news_small/2022/08/20_084706_news2_4-domashnya.jpg' },
+      { id:'s2', title:'Шаурма у вірменському лаваші 2X', price:99.9, img:'https://shuba.life/static/content/thumbs/1824x912/e/5b/xscngr---c2x1x50px50p-up--2212203a266bc5bba4b8e106fd0a15be.jpg' },
+      { id:'s3', title:'Шаурма з куркою', price:99.9, img:'https://img3.russianfood.com/dycontent/images_upl/513/big_512506.jpg' },
+      { id:'s4', title:'Шаурма з ковбасою і крабовими паличками', price:89.9, img:'https://img3.russianfood.com/dycontent/images_upl/303/big_302085.jpg' },
+      { id:'s5', title:'Шаурма гавайська', price:89.9, img:'https://instafood.com.ua/images/full_shop_product/2025-04-instafood-061-67ef7dac32d21.png' },
+      { id:'s6', title:'Шаурма з телятиною і спаржевою квасолею', price:109.9, img:'https://instafood.com.ua/images/shop_product_260/lamb-french-fries-6679158fc7935.png?1719211545' },
+      { id:'s7', title:'Шаурма з манго і креветкою', price:129.9, img:'https://instafood.com.ua/images/full_shop_product/2025-04-instafood-040-67efc2e57c4af.png' },
+      { id:'s8', title:'Шаурма з бараниною і спаржевою квасолею', price:139.9, img:'https://instafood.com.ua/images/full_shop_product/2025-04-instafood-040-67efc2e57c4af.png' },
+      { id:'s9', title:'Шаурма з бараниною і картоплею', price:89.9, img:'https://assets.dots.live/misteram-public/018dc710-8dc0-7040-858f-5bfaa7baeb49-826x0.png' }
+    ];
 
+    const STORAGE_KEY = 'shawarma_cart_v1';
+    let cart = loadCart();
 
+    const productsEl = document.getElementById('products');
+    PRODUCTS.forEach(p=>{
+      const div = document.createElement('div');
+      div.className = 'product';
+      div.innerHTML = `<img src="${p.img}"><h2>${p.title}</h2><p>${p.price.toFixed(2)} ₴</p><button data-add="${p.id}">Додати</button>`;
+      productsEl.appendChild(div);
+    });
 
+    productsEl.addEventListener('click',e=>{
+      const id=e.target.dataset.add; if(id) addToCart(id);
+    });
 
+    const cartEl=document.getElementById('cart');
+    const emptyEl=document.getElementById('cart-empty');
+    const totalsEl=document.getElementById('totals');
+    const subtotalEl=document.getElementById('subtotal');
+    const shippingEl=document.getElementById('shipping');
+    const totalEl=document.getElementById('total');
+    const checkoutBtn=document.getElementById('checkout');
+    const clearBtn=document.getElementById('clear');
 
+    function renderCart(){
+      cartEl.innerHTML='';
+      if(!cart.items.length){ emptyEl.style.display='block'; totalsEl.style.display='none'; return; }
+      emptyEl.style.display='none'; totalsEl.style.display='block';
+      cart.items.forEach(i=>{
+        const p=PRODUCTS.find(x=>x.id===i.id);
+        const row=document.createElement('div');
+        row.className='cart-item';
+        row.innerHTML=`<span>${p.title} × ${i.qty}</span><span>${(p.price*i.qty).toFixed(2)} ₴ <button data-remove="${i.id}">✕</button></span>`;
+        cartEl.appendChild(row);
+      });
+      const subtotal=cart.items.reduce((s,i)=>{const p=PRODUCTS.find(x=>x.id===i.id);return s+p.price*i.qty;},0);
+      const shipping=subtotal>0?50:0;
+      subtotalEl.textContent=subtotal.toFixed(2)+' ₴';
+      shippingEl.textContent=shipping+' ₴';
+      totalEl.textContent=(subtotal+shipping).toFixed(2)+' ₴';
+    }
 
-<main>  
-<img src= "https://mynizhyn.com/image/news_small/2022/08/20_084706_news2_4-domashnya.jpg">
-<h1>Домашня шаурма з вареною ковбасою та овочами<h1>
-<h2>89⁹⁰ грн</h2>
+    cartEl.addEventListener('click',e=>{
+      const rem=e.target.dataset.remove; if(rem) removeFromCart(rem);
+    });
 
-  <img src = "https://shuba.life/static/content/thumbs/1824x912/e/5b/xscngr---c2x1x50px50p-up--2212203a266bc5bba4b8e106fd0a15be.jpg">
-  <h1>Шаурма у вірменському лаваші 2X</h1>
-  <h2>99⁹⁰грн</h2>
+    clearBtn.onclick=()=>{cart.items=[];saveCart();renderCart();}
+    checkoutBtn.onclick=()=>{if(!cart.items.length){alert('Корзина порожня');return;}console.log('Order:',cart);alert('Замовлення створено! Подивіться консоль.');cart.items=[];saveCart();renderCart();}
 
-  <img src = "https://img3.russianfood.com/dycontent/images_upl/513/big_512506.jpg"
-    <h1>Шаурма с курицей</h1>
-   <h2>99⁹⁰ грн</</h2>
+    function addToCart(id,qty=1){const f=cart.items.find(i=>i.id===id);if(f)f.qty+=qty;else cart.items.push({id,qty});saveCart();renderCart();}
+    function removeFromCart(id){cart.items=cart.items.filter(i=>i.id!==id);saveCart();renderCart();}
+    function saveCart(){localStorage.setItem(STORAGE_KEY,JSON.stringify(cart));}
+    function loadCart(){try{const raw=localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):{items:[]}}catch{return{items:[]}}}
+    renderCart();
+  </script>
+</body>
+</html>
 
-  <img src = "https://img3.russianfood.com/dycontent/images_upl/303/big_302085.jpg">
-  <h1>Шаурма с колбасой и крабовыми палочками</h1>
-    <h2>89⁹⁰ грн</h2>
-
-      <img src = "https://instafood.com.ua/images/full_shop_product/2025-04-instafood-061-67ef7dac32d21.png">
-  <h1>шаурма гавайска</h1>
-    <h2>89⁹⁰ грн</h2>
-
-          <img src = "https://instafood.com.ua/images/shop_product_260/lamb-french-fries-6679158fc7935.png?1719211545">
-  <h1>Шаурма з телятиною і спаржевою квасолею</h1>
-    <h2>109⁹⁰ грн</h2>
-
-            <img src = "https://instafood.com.ua/images/full_shop_product/2025-04-instafood-040-67efc2e57c4af.png">
-  <h1>Шаурма з манго і креветкою</h1>
-    <h2>129⁹⁰ грн</h2>
-
-              <img src = "https://instafood.com.ua/images/full_shop_product/2025-04-instafood-040-67efc2e57c4af.png">
-  <h1>Шаурма з бараниною і спаржевою квасолею</h1>
-    <h2>139⁹⁰ грн</h2>
-
-                <img src = "https://assets.dots.live/misteram-public/018dc710-8dc0-7040-858f-5bfaa7baeb49-826x0.png">
-  <h1>Шаурма з бараниною і картоплею</h1>
-    <h2>89⁹⁰ грн</h2>
-</main>
